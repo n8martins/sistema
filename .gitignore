@@ -42,3 +42,4 @@ next-env.d.ts
 
 # Sistema Home: per-TV package snapshots written by tv/setup.sh
 /tv/backups/
+/tv/tools/platform-tools/

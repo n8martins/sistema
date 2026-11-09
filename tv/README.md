@@ -15,20 +15,29 @@ The design is SISTEMA's own system, flipped dark for a room at night: Fraunces f
 1. Settings > System > About. Scroll to **Android TV OS build** and press OK 7 times until it says you're a developer.
 2. Settings > System > Developer options. Turn on **USB debugging** (and **Network debugging** if your TV shows it).
 
-**On your Mac** (same Wi-Fi as the TV)
+**On your Windows PC** (same Wi-Fi as the TV)
+
+1. Download the project: [sistema ZIP](https://github.com/n8martins/sistema/archive/refs/heads/claude/google-tv-custom-launcher-wi3l8c.zip)
+2. Right-click the ZIP > **Extract All** > **Extract**.
+3. Open the extracted folder, then the **tv** folder.
+4. Double-click **Setup-Windows.cmd**. If Windows warns you, click **More info** > **Run anyway** (or **Run**).
+
+The first run downloads Google's adb tool by itself. Nothing else to install.
+
+**On a Mac or Linux** (same Wi-Fi as the TV)
 
 ```bash
-brew install android-platform-tools      # gives you adb
-git clone https://github.com/n8martins/sistema.git
+brew install android-platform-tools      # gives you adb (Linux: sudo apt install adb)
+git clone -b claude/google-tv-custom-launcher-wi3l8c https://github.com/n8martins/sistema.git
 cd sistema/tv
 ./setup.sh                               # uses 192.168.4.40 by default
 ```
 
-When the TV asks **Allow USB debugging?**, tick **Always allow from this computer** and press **Allow**.
+**Then, on the TV:** when it asks **Allow USB debugging?**, tick **Always allow from this computer** and press **Allow**.
 
 That's it. Press Home on the remote.
 
-## What setup.sh does
+## What setup does
 
 1. Installs Sistema Home and opens it.
 2. **Checks it's actually running.** If it isn't, it stops right there and changes nothing else.
@@ -68,18 +77,25 @@ If one of your six apps isn't installed, its tile says so and opens Google Play.
 Change the name, city, weather location, units or favorites without rebuilding:
 
 ```bash
-adb -s 192.168.4.40:5555 shell am start -n com.sistema.home/.HomeActivity \
-  --es city "Brickell" --es lat 25.7617 --es lon -80.1918 --es units f
+adb -s 192.168.4.40:5555 shell am start -n com.sistema.home/.HomeActivity --es city Brickell --es lat 25.7617 --es lon -80.1918 --es units f
 ```
+
+On Windows, open PowerShell in the tv folder and start the line with `tools\platform-tools\adb.exe` instead of `adb`.
 
 `--es favorites "com.netflix.ninja,com.google.android.youtube.tv"` sets the favorites row in one shot. Package names are in `setup.sh`.
 
 ## Undo
 
+Windows: double-click **Restore-Windows.cmd** in the tv folder.
+
+Mac or Linux:
+
 ```bash
 ./restore.sh                 # everything back on, Sistema removed
 ./restore.sh --keep-app      # Google TV home back, Sistema stays installed
 ```
+
+On Windows, keep the app with `Restore-Windows.cmd -KeepApp` from a Command Prompt in the tv folder.
 
 ## Good to know
 

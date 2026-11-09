@@ -33,7 +33,7 @@ sh_tv() { adb -s "$ADDR" shell "$@" 2>/dev/null | tr -d '\r' || true; }
 command -v adb >/dev/null 2>&1 || die "adb isn't installed. Mac: brew install android-platform-tools"
 
 step "Connecting to $ADDR"
-for _ in 1 2 3 4 5 6; do
+for _ in 1 2 3 4 5 6 7 8 9 10 11 12; do
   adb connect "$ADDR" >/dev/null 2>&1 || true
   [ "$(adb -s "$ADDR" get-state 2>/dev/null || true)" = "device" ] && break
   sleep 5

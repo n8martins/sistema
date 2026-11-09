@@ -87,7 +87,7 @@ bold "Sistema Home setup"
 step "Connecting to $ADDR"
 ok "If the TV asks to allow USB debugging, pick Always allow from this computer, then Allow."
 connected=0
-for attempt in 1 2 3 4 5 6; do
+for attempt in 1 2 3 4 5 6 7 8 9 10 11 12; do
   adb connect "$ADDR" >/dev/null 2>&1 || true
   state="$(adb -s "$ADDR" get-state 2>/dev/null || true)"
   if [ "$state" = "device" ]; then connected=1; break; fi
@@ -135,8 +135,9 @@ fi
 ok "Installed."
 
 step "Making sure it runs before touching anything"
+# Single quotes keep multi word values (like a city name) in one piece on the TV side.
 sh_tv am start -W -n "$HOME_ACTIVITY" \
-  --es name "$NAME" --es city "$CITY" --es lat "$LAT" --es lon "$LON" --es units "$UNITS" >/dev/null
+  --es name "'$NAME'" --es city "'$CITY'" --es lat "$LAT" --es lon "$LON" --es units "$UNITS" >/dev/null
 sleep 4
 activities="$(sh_tv dumpsys activity activities)"
 if [ -z "$(sh_tv pidof "$PKG")" ] || ! grep -qE "ResumedActivity.*$PKG" <<<"$activities"; then
