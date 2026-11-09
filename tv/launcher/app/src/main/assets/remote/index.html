@@ -1,0 +1,182 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, viewport-fit=cover, user-scalable=no">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="Sistema">
+<meta name="theme-color" content="#110E0C">
+<meta name="format-detection" content="telephone=no">
+<link rel="apple-touch-icon" href="icon-180.png">
+<link rel="manifest" href="manifest.webmanifest">
+<title>Sistema Remote</title>
+<link rel="stylesheet" href="style.css">
+</head>
+<body>
+
+<!-- Pairing: the first time only -->
+<section id="pair" class="pair" hidden>
+  <div class="eyebrow">Sistema remote</div>
+  <h1>Connect to your TV.</h1>
+  <p class="lead">Your TV will show a four digit code. Type it here and this phone becomes your remote.</p>
+  <button id="pair-start" class="primary">Show the code on my TV</button>
+  <div id="pair-entry" class="pair-entry" hidden>
+    <input id="pair-code" inputmode="numeric" pattern="[0-9]*" maxlength="4" autocomplete="one-time-code" placeholder="0000" aria-label="Code from the TV">
+    <button id="pair-go" class="primary">Pair</button>
+  </div>
+  <p id="pair-msg" class="msg"></p>
+</section>
+
+<main id="main" hidden>
+
+  <!-- Remote -->
+  <section class="tab" id="tab-remote">
+    <header class="top">
+      <div class="eyebrow">Sistema remote <span id="status" class="status"><i></i><b>Connecting</b></span></div>
+      <h1 id="hello">Hello.</h1>
+      <p id="now" class="now"></p>
+    </header>
+
+    <div id="pad" class="pad" aria-label="Touchpad">
+      <span class="chev up"></span><span class="chev down"></span>
+      <span class="chev left"></span><span class="chev right"></span>
+      <span id="dot" class="dot"></span>
+      <p class="pad-hint">Swipe to move &middot; Tap to select &middot; Hold for options</p>
+    </div>
+
+    <div class="row three">
+      <button class="key" data-key="back" aria-label="Back">
+        <svg viewBox="0 0 24 24"><path d="M9 14 4 9l5-5"/><path d="M4 9h10.5a5.5 5.5 0 0 1 0 11H11"/></svg><span>Back</span>
+      </button>
+      <button class="key" data-key="home" aria-label="Home">
+        <svg viewBox="0 0 24 24"><path d="M3 10.5 12 3l9 7.5"/><path d="M5 9.5V21h14V9.5"/></svg><span>Home</span>
+      </button>
+      <button class="key" data-key="playpause" aria-label="Play or pause">
+        <svg viewBox="0 0 24 24"><path d="M5 4.5v15l9-7.5z" class="fill"/><path d="M17 5v14M20.5 5v14"/></svg><span>Play</span>
+      </button>
+    </div>
+
+    <div class="row">
+      <div class="rocker">
+        <button class="key" data-key="voldown" data-repeat="1" aria-label="Volume down"><svg viewBox="0 0 24 24"><path d="M6 12h12"/></svg></button>
+        <button class="key" data-key="mute" aria-label="Mute"><svg viewBox="0 0 24 24"><path d="M4 9.5h3.5L12 6v12l-4.5-3.5H4z" class="fill"/><path d="M16 9.5l4.5 5M20.5 9.5l-4.5 5"/></svg></button>
+        <button class="key" data-key="volup" data-repeat="1" aria-label="Volume up"><svg viewBox="0 0 24 24"><path d="M6 12h12M12 6v12"/></svg></button>
+      </div>
+      <button id="kb-open" class="round" aria-label="Type on the TV">
+        <svg viewBox="0 0 24 24"><rect x="2.5" y="6" width="19" height="12" rx="2.5"/><path d="M6 10h.01M9.5 10h.01M13 10h.01M16.5 10h.01M8 14h8"/></svg>
+      </button>
+      <button id="power" class="round" aria-label="Turn the TV off">
+        <svg viewBox="0 0 24 24"><path d="M12 3v8"/><path d="M6.4 6.6a8 8 0 1 0 11.2 0"/></svg>
+      </button>
+    </div>
+
+    <div class="inputs" id="inputs"></div>
+  </section>
+
+  <!-- Apps -->
+  <section class="tab" id="tab-apps" hidden>
+    <header class="top">
+      <div class="eyebrow">Your lineup</div>
+      <h1>Apps</h1>
+      <p class="now">Tap to open on the TV. Star to pin it to your home screen.</p>
+    </header>
+    <div id="fav-grid" class="grid"></div>
+    <h2 class="section">Everything else</h2>
+    <div id="app-list" class="list"></div>
+  </section>
+
+  <!-- Make it yours -->
+  <section class="tab" id="tab-yours" hidden>
+    <header class="top">
+      <div class="eyebrow">Make it yours</div>
+      <h1>Your screen.</h1>
+      <p class="now">Changes show on the TV right away.</p>
+    </header>
+
+    <div class="card">
+      <div class="eyebrow">Greeting</div>
+      <p id="greet-preview" class="preview">Hello Nicolas<em>.</em></p>
+      <input id="name" class="field" maxlength="40" autocomplete="given-name" placeholder="Your name">
+    </div>
+
+    <div class="card">
+      <div class="eyebrow">Weather</div>
+      <p class="value" id="city-now"></p>
+      <div class="search">
+        <input id="city" class="field" placeholder="Search a city" autocomplete="off" enterkeyhint="search">
+        <button id="city-go" class="ghost">Search</button>
+      </div>
+      <div id="city-results" class="results"></div>
+      <div class="seg" id="units">
+        <button data-units="f">&deg;F</button><button data-units="c">&deg;C</button>
+      </div>
+    </div>
+
+    <div class="card">
+      <div class="eyebrow">Favorites order</div>
+      <div id="fav-order" class="order"></div>
+      <p class="hint">Add more from the Apps tab with the star.</p>
+    </div>
+
+    <div class="card">
+      <div class="eyebrow">Quotes</div>
+      <p id="quote-now" class="quote-now"></p>
+      <button id="quote-next" class="ghost wide">Show a new quote on the TV</button>
+      <div class="divider"></div>
+      <p class="label">Add your own</p>
+      <textarea id="q-text" class="field" rows="3" maxlength="200" placeholder="Something you need to hear in the morning"></textarea>
+      <input id="q-author" class="field" maxlength="40" placeholder="Who said it (optional)">
+      <p class="hint" style="margin:-2px 0 0">Leave it empty and it's signed with your name.</p>
+      <button id="q-add" class="primary wide">Put it on my TV</button>
+      <div id="q-list" class="qlist"></div>
+    </div>
+
+    <div class="card">
+      <div class="eyebrow">Sleep timer</div>
+      <p id="sleep-now" class="value">Off</p>
+      <div class="chips" id="sleep">
+        <button data-min="0">Off</button><button data-min="30">30 min</button><button data-min="60">1 hr</button><button data-min="90">90 min</button><button data-min="120">2 hr</button>
+      </div>
+    </div>
+
+    <div class="card">
+      <div class="eyebrow">This phone</div>
+      <p class="value" id="addr"></p>
+      <p class="hint" id="adb-note"></p>
+      <button id="forget" class="ghost wide">Forget this phone</button>
+    </div>
+  </section>
+</main>
+
+<nav id="tabbar" class="tabbar" hidden>
+  <button data-tab="remote" class="on">
+    <svg viewBox="0 0 24 24"><rect x="6" y="2.5" width="12" height="19" rx="6"/><circle cx="12" cy="8.5" r="2.2"/></svg><span>Remote</span>
+  </button>
+  <button data-tab="apps">
+    <svg viewBox="0 0 24 24"><rect x="3.5" y="3.5" width="7" height="7" rx="1.8"/><rect x="13.5" y="3.5" width="7" height="7" rx="1.8"/><rect x="3.5" y="13.5" width="7" height="7" rx="1.8"/><rect x="13.5" y="13.5" width="7" height="7" rx="1.8"/></svg><span>Apps</span>
+  </button>
+  <button data-tab="yours">
+    <svg viewBox="0 0 24 24"><path d="M4 7h16M4 12h16M4 17h16"/><circle cx="15" cy="7" r="2" class="fill"/><circle cx="8" cy="12" r="2" class="fill"/><circle cx="13" cy="17" r="2" class="fill"/></svg><span>Make it yours</span>
+  </button>
+</nav>
+
+<!-- Keyboard sheet -->
+<div id="kb" class="sheet" hidden>
+  <div class="sheet-card">
+    <div class="eyebrow">Type on the TV</div>
+    <input id="kb-input" class="field big" autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false" enterkeyhint="search" placeholder="Start typing">
+    <div class="row three tight">
+      <button class="key small" id="kb-del">Delete</button>
+      <button class="key small" id="kb-enter">Search</button>
+      <button class="key small" id="kb-done">Done</button>
+    </div>
+    <p class="hint">Letters appear in whatever box is open on the TV, like a search bar.</p>
+  </div>
+</div>
+
+<div id="toast" class="toast" role="status"></div>
+<script src="app.js"></script>
+</body>
+</html>

@@ -131,6 +131,67 @@ final class Copy {
         return c.getActualMaximum(Calendar.DAY_OF_YEAR);
     }
 
+    /** Your own quotes, added from the phone. Stored as a JSON array of [text, author]. */
+    static List<String[]> custom(SharedPreferences p) {
+        List<String[]> out = new ArrayList<>();
+        try {
+            org.json.JSONArray a = new org.json.JSONArray(p.getString(Prefs.CUSTOM_QUOTES, "[]"));
+            for (int i = 0; i < a.length(); i++) {
+                org.json.JSONArray q = a.getJSONArray(i);
+                out.add(new String[]{q.getString(0), q.optString(1, "")});
+            }
+        } catch (org.json.JSONException ignored) {
+        }
+        return out;
+    }
+
+    /** Built in quotes first, then yours. Deck indexes point into this list. */
+    static List<String[]> all(SharedPreferences p) {
+        List<String[]> out = new ArrayList<>();
+        Collections.addAll(out, QUOTES);
+        out.addAll(custom(p));
+        return out;
+    }
+
+    static String[] quote(SharedPreferences p, int index) {
+        List<String[]> all = all(p);
+        if (index < 0 || index >= all.size()) return QUOTES[0];
+        return all.get(index);
+    }
+
+    /** Adds one of your quotes and puts it on top of the deck, so it shows next. */
+    static void addCustom(SharedPreferences p, String text, String author) {
+        List<String[]> mine = custom(p);
+        mine.add(new String[]{text, author == null ? "" : author});
+        saveCustom(p, mine);
+        int newIndex = QUOTES.length + mine.size() - 1;
+        List<Integer> order = shuffled(new Random(), QUOTES.length + mine.size());
+        order.remove(Integer.valueOf(newIndex));
+        order.add(0, newIndex);
+        p.edit().putString(Prefs.Q_ORDER, join(order)).putInt(Prefs.Q_POS, -1).apply();
+    }
+
+    static void removeCustom(SharedPreferences p, int index) {
+        List<String[]> mine = custom(p);
+        if (index < 0 || index >= mine.size()) return;
+        mine.remove(index);
+        saveCustom(p, mine);
+        List<Integer> order = shuffled(new Random(), QUOTES.length + mine.size());
+        p.edit().putString(Prefs.Q_ORDER, join(order)).putInt(Prefs.Q_POS, 0)
+                .putLong(Prefs.Q_TIME, System.currentTimeMillis()).apply();
+    }
+
+    private static void saveCustom(SharedPreferences p, List<String[]> mine) {
+        org.json.JSONArray a = new org.json.JSONArray();
+        for (String[] q : mine) {
+            org.json.JSONArray item = new org.json.JSONArray();
+            item.put(q[0]);
+            item.put(q[1]);
+            a.put(item);
+        }
+        p.edit().putString(Prefs.CUSTOM_QUOTES, a.toString()).apply();
+    }
+
     /** Current quote index from the shuffled deck. */
     static int currentQuote(SharedPreferences p) {
         List<Integer> order = order(p);
@@ -146,7 +207,7 @@ final class Copy {
         SharedPreferences.Editor e = p.edit();
         if (pos >= order.size()) {
             int last = order.get(order.size() - 1);
-            order = shuffled(new Random());
+            order = shuffled(new Random(), order.size());
             // Never show the same quote twice in a row across a reshuffle.
             if (order.get(0) == last) Collections.swap(order, 0, order.size() - 1);
             e.putString(Prefs.Q_ORDER, join(order));
@@ -157,27 +218,28 @@ final class Copy {
     }
 
     private static List<Integer> order(SharedPreferences p) {
+        int size = QUOTES.length + custom(p).size();
         String s = p.getString(Prefs.Q_ORDER, null);
         List<Integer> out = new ArrayList<>();
         if (s != null) {
             for (String part : s.split(",")) {
                 try {
                     int i = Integer.parseInt(part);
-                    if (i >= 0 && i < QUOTES.length) out.add(i);
+                    if (i >= 0 && i < size && !out.contains(i)) out.add(i);
                 } catch (NumberFormatException ignored) {
                 }
             }
         }
-        if (out.size() != QUOTES.length) {
-            out = shuffled(new Random());
+        if (out.size() != size) {
+            out = shuffled(new Random(), size);
             p.edit().putString(Prefs.Q_ORDER, join(out)).putInt(Prefs.Q_POS, -1).apply();
         }
         return out;
     }
 
-    private static List<Integer> shuffled(Random r) {
+    private static List<Integer> shuffled(Random r, int size) {
         List<Integer> l = new ArrayList<>();
-        for (int i = 0; i < QUOTES.length; i++) l.add(i);
+        for (int i = 0; i < size; i++) l.add(i);
         Collections.shuffle(l, r);
         return l;
     }

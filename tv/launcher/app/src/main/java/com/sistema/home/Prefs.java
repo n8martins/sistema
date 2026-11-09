@@ -28,6 +28,10 @@ final class Prefs {
     static final String Q_POS = "q_pos";
     static final String Q_TIME = "q_time";
     static final String LINE_SEED = "line_seed";
+    static final String CUSTOM_QUOTES = "custom_quotes";
+    static final String TOKENS = "remote_tokens";
+    static final String PAIR_CODE = "pair_code";
+    static final String PAIR_UNTIL = "pair_until";
 
     static final String DEFAULT_NAME = "Nicolas";
     static final String DEFAULT_CITY = "Miami";

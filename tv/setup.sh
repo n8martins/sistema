@@ -148,6 +148,26 @@ if [ -z "$(sh_tv pidof "$PKG")" ] || ! grep -qE "ResumedActivity.*$PKG" <<<"$act
 fi
 ok "Running on screen. Look at the TV."
 
+step "Unlocking the phone remote"
+ok "The TV asks one more time to allow debugging. This time it's Sistema itself,"
+ok "so your iPhone can press buttons inside any app. Tick Always allow, then press Allow."
+sh_tv dumpsys deviceidle whitelist +"$PKG" >/dev/null
+REMOTE="http://${ADDR%%:*}:8737"
+remote_state=""
+if command -v curl >/dev/null 2>&1; then
+  for _ in $(seq 1 "${REMOTE_WAIT:-30}"); do
+    health="$(curl -s -m 3 "$REMOTE/api/health?warm=1" 2>/dev/null || true)"
+    remote_state="$(sed -n 's/.*"adb":"\([a-z]*\)".*/\1/p' <<<"$health")"
+    [ "$remote_state" = "ok" ] && break
+    sleep 2
+  done
+fi
+if [ "$remote_state" = "ok" ]; then
+  ok "Approved. Your phone has full control."
+else
+  ok "Not approved yet. No problem: the TV asks again the first time you use the phone remote."
+fi
+
 step "Setting Sistema as the home screen"
 sh_tv cmd package set-home-activity "$HOME_ACTIVITY" >/dev/null || true
 for pkg in $LAUNCHER_PKGS; do
@@ -198,6 +218,13 @@ for slot in "YouTube:com.google.android.youtube.tv" "Spotify:com.spotify.tv.andr
 done
 
 sh_tv input keyevent KEYCODE_HOME >/dev/null || true
+
+step "Your iPhone remote"
+ok "On your iPhone, on the same Wi-Fi, open Safari and go to:"
+ok ""
+ok "    $REMOTE"
+ok ""
+ok "Tap Share, then Add to Home Screen. Open it and type the code the TV shows."
 
 step "Done"
 ok "Press Home on the remote. That's your screen now."

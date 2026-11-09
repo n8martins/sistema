@@ -4,6 +4,8 @@ Your Google TV, stripped down to what matters.
 
 Hello Nicolas. The time. Today's Miami weather. A quote dealt fresh every time the TV wakes up. Your six apps and your HDMI ports. Nothing else. No sponsored rows, no "top picks for you", no ads.
 
+Plus a remote for your iPhone that the TV hosts itself. Jump to [Phone remote](#phone-remote-iphone).
+
 ![Sistema Home](preview/home.jpg)
 
 The design is SISTEMA's own system, flipped dark for a room at night: Fraunces for the greeting and quotes, a clean sans for the clock, mono for the small labels, paper on ink, terracotta accents. The background follows the real sun. It glows warm at sunrise, stays soft through the day, turns terracotta at golden hour and goes deep after dark.
@@ -41,8 +43,9 @@ That's it. Press Home on the remote.
 
 1. Installs Sistema Home and opens it.
 2. **Checks it's actually running.** If it isn't, it stops right there and changes nothing else.
-3. Makes it your home screen and turns off the stock Google TV home.
-4. Shows you the bloat it found and asks before turning it off:
+3. Unlocks the phone remote. The TV asks once to allow debugging for Sistema itself.
+4. Makes it your home screen and turns off the stock Google TV home.
+5. Shows you the bloat it found and asks before turning it off:
 
 | Package | What it is |
 | --- | --- |
@@ -72,7 +75,33 @@ Nothing is deleted. Everything is *disabled*, and a snapshot of every package on
 
 If one of your six apps isn't installed, its tile says so and opens Google Play.
 
-## Make it yours
+## Phone remote (iPhone)
+
+<img src="preview/phone-remote.jpg" width="250" alt="Remote"> <img src="preview/phone-apps.jpg" width="250" alt="Apps"> <img src="preview/phone-make-it-yours.jpg" width="250" alt="Make it yours">
+
+The TV hosts its own remote. No App Store, no account, nothing in the cloud.
+
+1. On your iPhone, on the same Wi-Fi, open Safari and go to **http://192.168.4.40:8737**
+2. Tap **Share** > **Add to Home Screen** > **Add**. It now opens full screen like an app.
+3. Open it, tap **Show the code on my TV**, and type the four digits the TV shows.
+4. The first time, the TV asks **Allow USB debugging?** for Sistema. Tick **Always allow** and press **Allow**. That's what lets your phone press buttons inside Netflix, YouTube and everything else.
+
+**Remote:** a touchpad like the Apple TV remote. Swipe to move, tap to select, tap an edge to click that direction, hold for options. Back, Home, Play, volume (hold to keep going), mute, turn off, and your HDMI inputs one tap away.
+
+**Keyboard:** type on your phone and it appears in whatever search box is open on the TV.
+
+**Apps:** your favorites with their real banners, plus everything else installed. Tap to open on the TV, star to pin to the home screen.
+
+**Make it yours:**
+* Change the greeting name.
+* Search any city for the weather, and pick °F or °C.
+* Reorder or remove favorites.
+* Put a new quote on the TV, or add your own quotes. Yours go straight onto the TV and are signed with your name if you leave the author empty.
+* Set a sleep timer: 30 minutes, 1, 1.5 or 2 hours.
+
+Only phones that typed the code can control the TV. "Forget this phone" in Make it yours revokes it. If your TV's address changes, use the new one shown in small text under the weather on the TV until a phone is paired.
+
+## Make it yours over ADB
 
 Change the name, city, weather location, units or favorites without rebuilding:
 
@@ -107,6 +136,7 @@ On Windows, keep the app with `Restore-Windows.cmd -KeepApp` from a Command Prom
 ## Under the hood
 
 * `launcher/` is a standard Android project (Java, no dependencies). Open it in Android Studio or run `./gradlew assembleDebug`.
-* `launcher/app/src/test/` boots the real launcher on Robolectric at 1920x1080, drives it like a remote, checks focus, the options sheet, HDMI switching and the weather parser, and renders the screenshots in `preview/`.
+* `launcher/app/src/test/` boots the real launcher on Robolectric at 1920x1080, drives it like a remote, checks focus, the options sheet, HDMI switching and the weather parser, and renders the screenshots in `preview/`. It also runs the phone remote's API over real HTTP: pairing, security, settings, favorites, quotes, icons and the sleep timer.
+* The phone remote lives in `launcher/app/src/main/assets/remote/` (the page) and `RemoteServer.java` (the API on port 8737). `AdbClient.java` talks to the TV's own debugging service so keys work inside every app. `tools/fake_adbd.py` stands in for that service in tests and checks the key format and signatures the way the real one does.
 * `dist/sistema-home.apk` is the prebuilt APK that `setup.sh` installs. `tools/build-apk.sh` rebuilds it without Android Studio.
 * GitHub Actions (`.github/workflows/tv-launcher.yml`) runs the tests and builds the APK on every change to `tv/`.

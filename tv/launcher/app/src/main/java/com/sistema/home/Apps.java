@@ -105,6 +105,11 @@ final class Apps {
 
     /** Builds one entry, or a placeholder if the app is not installed. */
     static App load(Context c, String pkg) {
+        return load(c, pkg, true);
+    }
+
+    /** Same, optionally skipping the banner and icon (much faster when only names are needed). */
+    static App load(Context c, String pkg, boolean art) {
         PackageManager pm = c.getPackageManager();
         App a = new App();
         a.pkg = pkg;
@@ -112,6 +117,7 @@ final class Apps {
             ApplicationInfo ai = pm.getApplicationInfo(pkg, 0);
             if (!ai.enabled) throw new PackageManager.NameNotFoundException();
             a.label = String.valueOf(pm.getApplicationLabel(ai));
+            if (!art) return a;
             Intent tv = pm.getLeanbackLaunchIntentForPackage(pkg);
             if (tv != null && tv.getComponent() != null) {
                 try {
@@ -131,6 +137,10 @@ final class Apps {
 
     /** Every launchable app on the TV except this launcher, sorted by name. */
     static List<App> all(Context c) {
+        return all(c, true);
+    }
+
+    static List<App> all(Context c, boolean art) {
         PackageManager pm = c.getPackageManager();
         Map<String, Boolean> pkgs = new LinkedHashMap<>();
         Intent tv = new Intent(Intent.ACTION_MAIN).addCategory(Intent.CATEGORY_LEANBACK_LAUNCHER);
@@ -142,7 +152,7 @@ final class Apps {
         pkgs.remove(c.getPackageName());
         List<App> out = new ArrayList<>();
         for (String pkg : pkgs.keySet()) {
-            App a = load(c, pkg);
+            App a = load(c, pkg, art);
             if (a.installed) out.add(a);
         }
         Collections.sort(out, new Comparator<App>() {

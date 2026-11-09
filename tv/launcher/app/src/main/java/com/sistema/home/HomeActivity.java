@@ -65,6 +65,38 @@ public class HomeActivity extends Activity {
     private String favSignature = "";
     private String inputSignature = "";
     private int lastSlotHour = -1;
+    private int shownQuote = -1;
+    private TextView remoteHint;
+    private View pairOverlay;
+    private TextView pairDigits;
+
+    /** Changes made from the phone remote land in prefs; the screen follows them live. */
+    private final SharedPreferences.OnSharedPreferenceChangeListener prefsListener =
+            new SharedPreferences.OnSharedPreferenceChangeListener() {
+                @Override
+                public void onSharedPreferenceChanged(SharedPreferences p, String key) {
+                    if (key == null) return;
+                    if (Prefs.Q_TIME.equals(key)) {
+                        animateQuote(Copy.currentQuote(prefs));
+                    } else if (Prefs.NAME.equals(key)) {
+                        setGreeting();
+                    } else if (Prefs.FAVORITES.equals(key)) {
+                        refreshFavorites(true);
+                    } else if (Prefs.LAT.equals(key) || Prefs.LON.equals(key) || Prefs.UNITS.equals(key)) {
+                        weather = Weather.fromCache(prefs);
+                        applyWeather();
+                        Weather.resetBackoff();
+                        Weather.fetch(prefs, wxListener);
+                    } else if (Prefs.CITY.equals(key)) {
+                        applyWeather();
+                    } else if (Prefs.PAIR_CODE.equals(key)) {
+                        showPairing(prefs.getString(Prefs.PAIR_CODE, null));
+                    } else if (Prefs.TOKENS.equals(key)) {
+                        showPairing(null);
+                        updateRemoteHint();
+                    }
+                }
+            };
 
     private final BroadcastReceiver tick = new BroadcastReceiver() {
         @Override
@@ -135,6 +167,9 @@ public class HomeActivity extends Activity {
         p.addDataScheme("package");
         register(packages, p);
 
+        prefs.registerOnSharedPreferenceChangeListener(prefsListener);
+        RemoteService.start(this);
+        updateRemoteHint();
         focusFirst();
     }
 
@@ -148,6 +183,7 @@ public class HomeActivity extends Activity {
 
     @Override
     protected void onDestroy() {
+        prefs.unregisterOnSharedPreferenceChangeListener(prefsListener);
         for (BroadcastReceiver r : new BroadcastReceiver[]{tick, screen, packages}) {
             try {
                 unregisterReceiver(r);
@@ -186,6 +222,8 @@ public class HomeActivity extends Activity {
     protected void onStart() {
         super.onStart();
         started = true;
+        RemoteService.start(this);
+        updateRemoteHint();
         updateClock();
         onMinute();
         refreshFavorites(false);
@@ -323,16 +361,8 @@ public class HomeActivity extends Activity {
         quoteBox.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View v) {
-                final int next = Copy.nextQuote(prefs);
-                quoteText.animate().alpha(0f).setDuration(160).withEndAction(new Runnable() {
-                    @Override
-                    public void run() {
-                        showQuote(next);
-                        quoteText.setTranslationY(Ui.pxf(10));
-                        quoteText.animate().alpha(1f).translationY(0f).setDuration(320)
-                                .setInterpolator(new DecelerateInterpolator()).start();
-                    }
-                }).start();
+                // The prefs listener animates the change, same as when the phone asks for one.
+                Copy.nextQuote(prefs);
             }
         });
     }
@@ -395,6 +425,77 @@ public class HomeActivity extends Activity {
         LinearLayout.LayoutParams sunp = Ui.lpWrap();
         sunp.topMargin = Ui.px(20);
         status.addView(wxSun, sunp);
+
+        remoteHint = Ui.eyebrow(this, "", 15, Ui.ACCENT_SOFT);
+        remoteHint.setLetterSpacing(0.14f);
+        remoteHint.setAlpha(0.8f);
+        LinearLayout.LayoutParams rp = Ui.lpWrap();
+        rp.topMargin = Ui.px(40);
+        status.addView(remoteHint, rp);
+    }
+
+    /** Until a phone is paired, the screen says where the remote lives. */
+    private void updateRemoteHint() {
+        if (remoteHint == null) return;
+        boolean paired = prefs.getString(Prefs.TOKENS, "").length() > 0;
+        String ip = RemoteServer.localIp();
+        if (paired || ip == null) {
+            remoteHint.setVisibility(View.GONE);
+        } else {
+            remoteHint.setVisibility(View.VISIBLE);
+            remoteHint.setText("Phone remote  \u00B7  " + ip + ":" + RemoteServer.PORT);
+        }
+    }
+
+    /** Big pairing code in the corner while a phone is connecting. Doesn't take focus. */
+    private void showPairing(String code) {
+        if (code == null || code.length() == 0) {
+            if (pairOverlay != null) {
+                final View o = pairOverlay;
+                pairOverlay = null;
+                o.animate().alpha(0f).setDuration(200).withEndAction(new Runnable() {
+                    @Override
+                    public void run() {
+                        root.removeView(o);
+                    }
+                }).start();
+            }
+            return;
+        }
+        if (pairOverlay == null) {
+            LinearLayout card = Ui.column(this);
+            card.setBackground(Ui.rounded(Ui.INK_RAISED, 28));
+            card.setPadding(Ui.px(44), Ui.px(36), Ui.px(44), Ui.px(36));
+            card.setElevation(Ui.pxf(30));
+            card.setFocusable(false);
+            card.addView(Ui.eyebrow(this, "Phone remote", 16, Ui.ACCENT_SOFT), Ui.lpWrap());
+            TextView t = Ui.text(this, Ui.light, 28, Ui.PAPER_90);
+            t.setText("Enter this code on your iPhone");
+            LinearLayout.LayoutParams tp = Ui.lpWrap();
+            tp.topMargin = Ui.px(12);
+            card.addView(t, tp);
+            pairDigits = Ui.text(this, Ui.display, 120, Ui.PAPER);
+            pairDigits.setLetterSpacing(0.12f);
+            LinearLayout.LayoutParams dp = Ui.lpWrap();
+            dp.topMargin = Ui.px(14);
+            card.addView(pairDigits, dp);
+            FrameLayout.LayoutParams lp = Ui.frame(-2, -2, Gravity.TOP | Gravity.END);
+            lp.topMargin = Ui.px(64);
+            lp.rightMargin = Ui.px(100);
+            root.addView(card, lp);
+            card.setAlpha(0f);
+            card.animate().alpha(1f).setDuration(220).start();
+            pairOverlay = card;
+        }
+        pairDigits.setText(code);
+        long until = prefs.getLong(Prefs.PAIR_UNTIL, 0);
+        long left = Math.max(1000, until - System.currentTimeMillis());
+        root.postDelayed(new Runnable() {
+            @Override
+            public void run() {
+                if (prefs.getLong(Prefs.PAIR_UNTIL, 0) <= System.currentTimeMillis()) showPairing(null);
+            }
+        }, left + 500);
     }
 
     private void buildBottom() {
@@ -457,13 +558,30 @@ public class HomeActivity extends Activity {
         greeting.setText(s);
     }
 
+    private void animateQuote(final int i) {
+        if (i == shownQuote) return;
+        shownQuote = i;
+        quoteText.animate().cancel();
+        quoteText.animate().alpha(0f).setDuration(160).withEndAction(new Runnable() {
+            @Override
+            public void run() {
+                showQuote(i);
+                quoteText.setTranslationY(Ui.pxf(10));
+                quoteText.animate().alpha(1f).translationY(0f).setDuration(320)
+                        .setInterpolator(new DecelerateInterpolator()).start();
+            }
+        }).start();
+    }
+
     private void showQuote(int i) {
-        String[] q = Copy.QUOTES[i];
+        shownQuote = i;
+        String[] q = Copy.quote(prefs, i);
         int len = q[0].length();
         float size = len > 118 ? 32 : (len > 96 ? 35 : 38);
         quoteText.setTextSize(android.util.TypedValue.COMPLEX_UNIT_PX, Ui.pxf(size));
         quoteText.setText("“" + q[0] + "”");
-        quoteAuthor.setText(q[1]);
+        // Your own quotes without an author are signed with your name.
+        quoteAuthor.setText(q[1].length() > 0 ? q[1] : prefs.getString(Prefs.NAME, Prefs.DEFAULT_NAME));
     }
 
     /** New quote and a new line. Runs each time the TV wakes up. */

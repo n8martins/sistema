@@ -174,6 +174,28 @@ if (-not $appPid -or ($activities -notmatch ("ResumedActivity.*" + [regex]::Esca
 }
 Ok "Running on screen. Look at the TV."
 
+# ---------------------------------------------------------------- phone remote
+
+Step "Unlocking the phone remote"
+Ok "The TV asks one more time to allow debugging. This time it's Sistema itself,"
+Ok "so your iPhone can press buttons inside any app. Tick Always allow, then press Allow."
+TvShell dumpsys deviceidle whitelist "+$Pkg" | Out-Null
+$TvHost = $Tv.Split(":")[0]
+$Remote = "http://${TvHost}:8737"
+$remoteState = ""
+for ($i = 1; $i -le 30; $i++) {
+    try {
+        $health = Invoke-RestMethod -Uri "$Remote/api/health?warm=1" -TimeoutSec 3 -UseBasicParsing
+        $remoteState = [string]$health.adb
+    } catch {
+        $remoteState = ""
+    }
+    if ($remoteState -eq "ok") { break }
+    Start-Sleep -Seconds 2
+}
+if ($remoteState -eq "ok") { Ok "Approved. Your phone has full control." }
+else { Ok "Not approved yet. No problem: the TV asks again the first time you use the phone remote." }
+
 # ---------------------------------------------------------------- home screen
 
 Step "Setting Sistema as the home screen"
@@ -234,6 +256,13 @@ foreach ($a in $apps) {
 }
 
 TvShell input keyevent KEYCODE_HOME | Out-Null
+
+Step "Your iPhone remote"
+Ok "On your iPhone, on the same Wi-Fi, open Safari and go to:"
+Ok ""
+Write-Host "       $Remote" -ForegroundColor White
+Ok ""
+Ok "Tap Share, then Add to Home Screen. Open it and type the code the TV shows."
 
 Step "Done"
 Ok "Press Home on the remote. That's your screen now."
