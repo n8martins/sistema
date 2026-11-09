@@ -183,9 +183,11 @@ TvShell dumpsys deviceidle whitelist "+$Pkg" | Out-Null
 $TvHost = $Tv.Split(":")[0]
 $Remote = "http://${TvHost}:8737"
 $remoteState = ""
+$reached = $false
 for ($i = 1; $i -le 30; $i++) {
     try {
         $health = Invoke-RestMethod -Uri "$Remote/api/health?warm=1" -TimeoutSec 3 -UseBasicParsing
+        if ([string]$health.app -eq "sistema-home") { $reached = $true }
         $remoteState = [string]$health.adb
     } catch {
         $remoteState = ""
@@ -193,8 +195,23 @@ for ($i = 1; $i -le 30; $i++) {
     if ($remoteState -eq "ok") { break }
     Start-Sleep -Seconds 2
 }
-if ($remoteState -eq "ok") { Ok "Approved. Your phone has full control." }
-else { Ok "Not approved yet. No problem: the TV asks again the first time you use the phone remote." }
+$version = ""
+$m = [regex]::Match((TvShell dumpsys package $Pkg), "versionName=(\S+)")
+if ($m.Success) { $version = $m.Groups[1].Value } else { $version = "unknown" }
+$listening = ((TvShell netstat -ltn) -split "`n" | Where-Object { $_ -match ":8737 " }).Count -gt 0
+$listenText = "no"
+if ($listening) { $listenText = "yes" }
+Ok "Sistema version on the TV: $version. Remote server listening on the TV: $listenText"
+if ($remoteState -eq "ok") {
+    Ok "Phone remote is live and approved. Your phone has full control."
+} elseif ($reached) {
+    Ok "Phone remote is live. Approval is still pending: the TV asks again the first time you use it."
+} elseif ($listening) {
+    Ok "The TV is serving the remote, but this computer can't reach it over Wi-Fi."
+    Ok "Check that the router isn't isolating devices (guest network or AP isolation)."
+} else {
+    Ok "The phone remote isn't running on the TV yet. Press Home on the TV, wait 10 seconds and run this again."
+}
 
 # ---------------------------------------------------------------- home screen
 

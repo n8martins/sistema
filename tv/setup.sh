@@ -154,18 +154,28 @@ ok "so your iPhone can press buttons inside any app. Tick Always allow, then pre
 sh_tv dumpsys deviceidle whitelist +"$PKG" >/dev/null
 REMOTE="http://${ADDR%%:*}:8737"
 remote_state=""
+reached=0
 if command -v curl >/dev/null 2>&1; then
   for _ in $(seq 1 "${REMOTE_WAIT:-30}"); do
     health="$(curl -s -m 3 "$REMOTE/api/health?warm=1" 2>/dev/null || true)"
+    case "$health" in *sistema-home*) reached=1 ;; esac
     remote_state="$(sed -n 's/.*"adb":"\([a-z]*\)".*/\1/p' <<<"$health")"
     [ "$remote_state" = "ok" ] && break
     sleep 2
   done
 fi
+version="$(sh_tv dumpsys package "$PKG" | sed -n 's/.*versionName=\([^ ]*\).*/\1/p' | head -n 1)"
+listening="$(sh_tv netstat -ltn | grep -c ':8737 ' || true)"
+ok "Sistema version on the TV: ${version:-unknown}. Remote server listening on the TV: $([ "${listening:-0}" -gt 0 ] && echo yes || echo no)"
 if [ "$remote_state" = "ok" ]; then
-  ok "Approved. Your phone has full control."
+  ok "Phone remote is live and approved. Your phone has full control."
+elif [ "$reached" = 1 ]; then
+  ok "Phone remote is live. Approval is still pending: the TV asks again the first time you use it."
+elif [ "${listening:-0}" -gt 0 ]; then
+  ok "The TV is serving the remote, but this computer can't reach it over Wi-Fi."
+  ok "Check that the router isn't isolating devices (guest network or AP isolation)."
 else
-  ok "Not approved yet. No problem: the TV asks again the first time you use the phone remote."
+  ok "The phone remote isn't running on the TV yet. Press Home on the TV, wait 10 seconds and run this again."
 fi
 
 step "Setting Sistema as the home screen"
