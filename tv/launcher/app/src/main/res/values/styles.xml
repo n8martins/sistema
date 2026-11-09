@@ -1,0 +1,14 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <color name="ink">#FF110E0C</color>
+
+    <style name="Theme.Sistema" parent="@android:style/Theme.DeviceDefault.NoActionBar.Fullscreen">
+        <item name="android:windowBackground">@color/ink</item>
+        <item name="android:windowShowWallpaper">false</item>
+        <item name="android:windowNoTitle">true</item>
+        <item name="android:windowFullscreen">true</item>
+        <item name="android:colorAccent">#FFB8442B</item>
+        <item name="android:defaultFocusHighlightEnabled">false</item>
+        <item name="android:windowDisablePreview">false</item>
+    </style>
+</resources>
